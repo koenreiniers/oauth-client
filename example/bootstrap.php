@@ -18,4 +18,6 @@ $oauthFactory = new OAuthClientFactory(new HttpClient(), new EventDispatcher());
 
 $credentialsProvider = new Credentials\Provider\InMemoryProvider($credentials);
 $tokenStorage = new SessionTokenStorage();
-$oauth = $oauthFactory->create($credentialsProvider, $tokenStorage);
+$tokenClassMap = new \Kr\OAuthClient\Token\Factory\DefaultClassMap();
+$tokenFactory = new \Kr\OAuthClient\Token\Factory\TokenFactory($tokenClassMap);
+$oauth = $oauthFactory->create($credentialsProvider, $tokenStorage, $tokenFactory);

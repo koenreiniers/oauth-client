@@ -5,19 +5,25 @@ use Kr\OAuthClient\Event\RedirectEvent;
 use Kr\OAuthClient\OAuthClientEvents;
 use Kr\OAuthClient\Event\ServerRequestEvent;
 use Kr\OAuthClient\Exception\CsrfException;
-use Kr\OAuthClient\Token\State;
+use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
 use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class StateListener implements EventSubscriberInterface
 {
 
+
+
     /** @var TokenStorageInterface */
     protected $tokenStorage;
 
-    public function __construct(TokenStorageInterface $tokenStorage)
+    /** @var TokenFactoryInterface */
+    protected $tokenFactory;
+
+    public function __construct(TokenStorageInterface $tokenStorage, TokenFactoryInterface $tokenFactory)
     {
         $this->tokenStorage = $tokenStorage;
+        $this->tokenFactory = $tokenFactory;
     }
 
     /**
@@ -34,12 +40,13 @@ class StateListener implements EventSubscriberInterface
 
         $tokenStorage = $this->tokenStorage;
 
-        $state = md5(uniqid(rand(), true));
-        $stateToken = new State($state);
+        $token = md5(uniqid(rand(), true));
+
+        $stateToken = $this->tokenFactory->create("state", $token);
 
         $tokenStorage->setToken($stateToken);
 
-        $url = $url . "&state=$state";
+        $url = $url . "&state=$token";
 
         $event->setUrl($url);
     }

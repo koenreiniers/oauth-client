@@ -6,7 +6,7 @@ use Kr\OAuthClient\Credentials\Provider\CredentialsProviderInterface;
 use Kr\HttpClient\Events\RequestEvent;
 use Kr\HttpClient\Events\ResponseEvent;
 use Kr\OAuthClient\OAuthClientEvents;
-use Kr\OAuthClient\Token\RefreshToken;
+use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
 use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -19,18 +19,14 @@ class RefreshTokenListener implements EventSubscriberInterface
     /** @var TokenStorageInterface */
     protected $tokenStorage;
 
-    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenStorageInterface $tokenStorage)
+    /** @var TokenFactoryInterface */
+    protected $tokenFactory;
+
+    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenStorageInterface $tokenStorage, TokenFactoryInterface $tokenFactory)
     {
         $this->credentialsProvider = $credentialsProvider;
         $this->tokenStorage = $tokenStorage;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public static function getType()
-    {
-        return RefreshToken::getType();
+        $this->tokenFactory = $tokenFactory;
     }
 
     /**
@@ -95,7 +91,7 @@ class RefreshTokenListener implements EventSubscriberInterface
 
         $expiresAt = null; // TODO
 
-        $refreshToken = new RefreshToken($arguments['refresh_token'], $expiresAt);
+        $refreshToken = $this->tokenFactory->create("refresh_token", $arguments['refresh_token'], $expiresAt);
         $this->tokenStorage->setToken($refreshToken);
     }
 

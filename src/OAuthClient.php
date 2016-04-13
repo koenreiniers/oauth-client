@@ -12,6 +12,7 @@ use Kr\OAuthClient\Event\ServerRequestEvent;
 use Kr\OAuthClient\Exception\AuthenticationException;
 use Kr\OAuthClient\Exception\AuthorizationException;
 use Kr\OAuthClient\Http\ServerRequest;
+use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
 use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -29,17 +30,22 @@ class OAuthClient
     /** @var TokenStorageInterface */
     protected $tokenStorage;
 
+    /** @var TokenFactoryInterface */
+    protected $tokenFactory;
+
     public function __construct(
         EventDispatcherInterface $eventDispatcher,
         ClientInterface $httpClient,
         CredentialsProviderInterface $credentialsProvider,
-        TokenStorageInterface $tokenStorage
+        TokenStorageInterface $tokenStorage,
+        TokenFactoryInterface $tokenFactory
     )
     {
         $this->eventDispatcher = $eventDispatcher;
         $this->httpClient = $httpClient;
         $this->credentialsProvider = $credentialsProvider;
         $this->tokenStorage = $tokenStorage;
+        $this->tokenFactory = $tokenFactory;
     }
 
     /**
@@ -69,8 +75,6 @@ class OAuthClient
     {
         $serverRequest = new ServerRequest($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
         $serverRequest = $serverRequest->withQueryParams($_GET);
-
-        $arguments = $_GET;
 
         $this->eventDispatcher->dispatch(OAuthClientEvents::AUTHORIZATION_RESPONSE, new ServerRequestEvent($serverRequest));
 

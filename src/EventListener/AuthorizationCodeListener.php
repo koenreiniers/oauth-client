@@ -7,7 +7,7 @@ use Kr\OAuthClient\Event\RedirectEvent;
 use Kr\OAuthClient\OAuthClientEvents;
 use Kr\OAuthClient\Event\ServerRequestEvent;
 use Kr\HttpClient\Events\RequestEvent;
-use Kr\OAuthClient\Token\AuthorizationCode;
+use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
 use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -20,10 +20,14 @@ class AuthorizationCodeListener implements EventSubscriberInterface
     /** @var TokenStorageInterface */
     protected $tokenStorage;
 
-    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenStorageInterface $tokenStorage)
+    /** @var TokenFactoryInterface */
+    protected $tokenFactory;
+
+    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenStorageInterface $tokenStorage, TokenFactoryInterface $tokenFactory)
     {
         $this->credentialsProvider = $credentialsProvider;
         $this->tokenStorage = $tokenStorage;
+        $this->tokenFactory = $tokenFactory;
     }
 
     /**
@@ -89,7 +93,9 @@ class AuthorizationCodeListener implements EventSubscriberInterface
         $expiresIn = 60; // TODO
         $expiresAt = (new \DateTime())->modify("+$expiresIn seconds");
 
-        $token = new AuthorizationCode($arguments['code'], $expiresAt);
+
+
+        $token = $this->tokenFactory->create("authorization_code", $arguments['code'], $expiresAt);
         $this->tokenStorage->setToken($token);
     }
 
