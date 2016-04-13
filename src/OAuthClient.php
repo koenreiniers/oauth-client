@@ -1,10 +1,8 @@
 <?php
 namespace Kr\OAuthClient;
 
-use GuzzleHttp\Psr7\Response;
 use Kr\HttpClient\Events\RequestEvent;
 use Kr\HttpClient\Events\ResponseEvent;
-use Kr\OAuthClient\Credentials\Provider\CredentialsProviderInterface;
 use Kr\OAuthClient\Event\RedirectEvent;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Psr7\Request;
@@ -12,8 +10,8 @@ use Kr\OAuthClient\Event\ServerRequestEvent;
 use Kr\OAuthClient\Exception\AuthenticationException;
 use Kr\OAuthClient\Exception\AuthorizationException;
 use Kr\OAuthClient\Http\ServerRequest;
-use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
-use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class OAuthClient
@@ -24,28 +22,10 @@ class OAuthClient
     /** @var ClientInterface */
     protected $httpClient;
 
-    /** @var CredentialsProviderInterface */
-    protected $credentialsProvider;
-
-    /** @var TokenStorageInterface */
-    protected $tokenStorage;
-
-    /** @var TokenFactoryInterface */
-    protected $tokenFactory;
-
-    public function __construct(
-        EventDispatcherInterface $eventDispatcher,
-        ClientInterface $httpClient,
-        CredentialsProviderInterface $credentialsProvider,
-        TokenStorageInterface $tokenStorage,
-        TokenFactoryInterface $tokenFactory
-    )
+    public function __construct(EventDispatcherInterface $eventDispatcher, ClientInterface $httpClient)
     {
         $this->eventDispatcher = $eventDispatcher;
         $this->httpClient = $httpClient;
-        $this->credentialsProvider = $credentialsProvider;
-        $this->tokenStorage = $tokenStorage;
-        $this->tokenFactory = $tokenFactory;
     }
 
     /**
@@ -78,24 +58,20 @@ class OAuthClient
 
         $this->eventDispatcher->dispatch(OAuthClientEvents::AUTHORIZATION_RESPONSE, new ServerRequestEvent($serverRequest));
 
-
-        $accessToken = $this->tokenStorage->getAccessToken();
-
-        if($accessToken !== null && !$accessToken->isExpired()) {
-            return;
-        }
-
         $this->requestAccessToken();
     }
 
     /**
+     * @param RequestInterface|null $resourceRequest
+     *
+     * @return RequestInterface|null
+     *
      * @throws AuthenticationException
      */
-    public function requestAccessToken()
+    public function requestAccessToken(RequestInterface $resourceRequest = null)
     {
         /** @var RequestEvent $event */
-
-        $request = new Request("GET", $this->credentialsProvider->getServerCredentials()->getAuthUrl());
+        $request = new Request("GET", "placeholder");
         $event = new RequestEvent($request);
 
         // TODO: Fix this
@@ -109,36 +85,44 @@ class OAuthClient
             throw new AuthenticationException("No grant type matched");
         }
 
-
         $response = $this->httpClient->send($request);
 
-        $this->eventDispatcher->dispatch(OAuthClientEvents::TOKEN_RESPONSE, new ResponseEvent($response));
+
+        /** @var ResponseEvent $event */
+        $event = $this->eventDispatcher->dispatch(OAuthClientEvents::TOKEN_RESPONSE, new ResponseEvent($response));
+
+
+        if($resourceRequest !== null) {
+            /** @var RequestEvent $event */
+            $event = new RequestEvent($request);
+            $event = $this->eventDispatcher->dispatch(OAuthClientEvents::RESOURCE_REQUEST, $event);
+            return $event->getRequest();
+        }
+
+
+
+        return null;
     }
 
     /**
      * Sends request
      *
-     * @param string $method
-     * @param string $url
+     * @param RequestInterface $request
      *
-     * @return \Psr\Http\Message\ResponseInterface
+     * @return ResponseInterface
+     *
+     * @throws AuthenticationException
      */
-    public function request($method, $url)
+    public function send(RequestInterface $request)
     {
-        // Check if access token is expired
-        $accessToken = $this->tokenStorage->getAccessToken();
-        if($accessToken === null || $accessToken->isExpired()) {
-            $this->requestAccessToken();
-        }
-
-        $server = $this->credentialsProvider->getServerCredentials();
-        $url = $server->getResourceUrl() . $url;
-        $request = new Request($method, $url);
-
         /** @var RequestEvent $event */
         $event = new RequestEvent($request);
         $event = $this->eventDispatcher->dispatch(OAuthClientEvents::RESOURCE_REQUEST, $event);
         $request = $event->getRequest();
+
+        if(!$request->hasHeader("Authorization")) {
+            $request = $this->requestAccessToken($request);
+        }
 
         $response = $this->httpClient->send($request);
 
@@ -148,5 +132,22 @@ class OAuthClient
         $response = $event->getResponse();
 
         return $response;
+    }
+
+    /**
+     * Creates a new resource request and sends it to the resource server
+     *
+     * @param string $method
+     * @param string $uri
+     * @param array $headers
+     * @param null $body
+     * @param string $protocolVersion
+     *
+     * @return \Psr\Http\Message\ResponseInterface
+     */
+    public function request($method, $uri, array $headers = [], $body = null, $protocolVersion = '1.1')
+    {
+        $request = new Request($method, $uri, $headers, $body, $protocolVersion);
+        return $this->send($request);
     }
 }

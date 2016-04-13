@@ -1,17 +1,14 @@
 <?php
 namespace Kr\OAuthClient\Token\Factory;
 
-use Kr\OAuthClient\Factory\ClassMap\AbstractClassMap;
+use Kr\OAuthClient\Factory\ClassMap\DynamicClassMap;
 use Kr\OAuthClient\Token;
 
-class DefaultClassMap extends AbstractClassMap
+class DefaultClassMap extends DynamicClassMap
 {
-    /**
-     * @inheritdoc
-     */
-    protected function registerClassMap()
+    public function __construct()
     {
-        return [
+        $this->classes = [
             "Bearer"                => Token\BearerToken::class,
             "refresh_token"         => Token\RefreshToken::class,
             "authorization_code"    => Token\AuthorizationCode::class,

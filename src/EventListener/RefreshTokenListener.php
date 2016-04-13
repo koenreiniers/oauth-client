@@ -5,9 +5,8 @@ use GuzzleHttp\Psr7\Request;
 use Kr\OAuthClient\Credentials\Provider\CredentialsProviderInterface;
 use Kr\HttpClient\Events\RequestEvent;
 use Kr\HttpClient\Events\ResponseEvent;
+use Kr\OAuthClient\Manager\TokenManagerInterface;
 use Kr\OAuthClient\OAuthClientEvents;
-use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
-use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class RefreshTokenListener implements EventSubscriberInterface
@@ -16,17 +15,13 @@ class RefreshTokenListener implements EventSubscriberInterface
     /** @var CredentialsProviderInterface */
     protected $credentialsProvider;
 
-    /** @var TokenStorageInterface */
-    protected $tokenStorage;
+    /** @var TokenManagerInterface */
+    protected $tokenManager;
 
-    /** @var TokenFactoryInterface */
-    protected $tokenFactory;
-
-    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenStorageInterface $tokenStorage, TokenFactoryInterface $tokenFactory)
+    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenManagerInterface $tokenManager)
     {
         $this->credentialsProvider = $credentialsProvider;
-        $this->tokenStorage = $tokenStorage;
-        $this->tokenFactory = $tokenFactory;
+        $this->tokenManager = $tokenManager;
     }
 
     /**
@@ -43,7 +38,7 @@ class RefreshTokenListener implements EventSubscriberInterface
             return;
         }
 
-        $refreshToken = $this->tokenStorage->getToken("refresh_token");
+        $refreshToken = $this->tokenManager->findToken("refresh_token");
         if($refreshToken === null) {
             return;
         }
@@ -89,10 +84,12 @@ class RefreshTokenListener implements EventSubscriberInterface
             return;
         }
 
-        $expiresAt = null; // TODO
+        $expiresIn = 14 * 24 * 60 * 60; // Two weeks
 
-        $refreshToken = $this->tokenFactory->create("refresh_token", $arguments['refresh_token'], $expiresAt);
-        $this->tokenStorage->setToken($refreshToken);
+        $refreshToken = $this->tokenManager->createToken("refresh_token");
+        $refreshToken->setToken($arguments['refresh_token']);
+        $refreshToken->setExpiresIn($expiresIn);
+        $this->tokenManager->persistToken($refreshToken);
     }
 
     /**

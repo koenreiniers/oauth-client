@@ -38,25 +38,8 @@ class SessionTokenStorage implements TokenStorageInterface
     /**
      * @inheritdoc
      */
-    public function getAccessToken()
+    public function removeToken(TokenInterface $token)
     {
-        return $this->getToken("access_token");
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setAccessToken(TokenInterface $token)
-    {
-        $type = "access_token";
-        $_SESSION[$this->prefix.$type] = $token;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function unsetToken($type)
-    {
-        unset($_SESSION[$this->prefix.$type]);
+        unset($_SESSION[$this->prefix.$token->getType()]);
     }
 }

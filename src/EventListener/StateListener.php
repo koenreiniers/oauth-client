@@ -2,28 +2,20 @@
 namespace Kr\OAuthClient\EventListener;
 
 use Kr\OAuthClient\Event\RedirectEvent;
+use Kr\OAuthClient\Manager\TokenManagerInterface;
 use Kr\OAuthClient\OAuthClientEvents;
 use Kr\OAuthClient\Event\ServerRequestEvent;
 use Kr\OAuthClient\Exception\CsrfException;
-use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
-use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class StateListener implements EventSubscriberInterface
 {
+    /** @var TokenManagerInterface */
+    protected $tokenManager;
 
-
-
-    /** @var TokenStorageInterface */
-    protected $tokenStorage;
-
-    /** @var TokenFactoryInterface */
-    protected $tokenFactory;
-
-    public function __construct(TokenStorageInterface $tokenStorage, TokenFactoryInterface $tokenFactory)
+    public function __construct(TokenManagerInterface $tokenManager)
     {
-        $this->tokenStorage = $tokenStorage;
-        $this->tokenFactory = $tokenFactory;
+        $this->tokenManager = $tokenManager;
     }
 
     /**
@@ -38,13 +30,16 @@ class StateListener implements EventSubscriberInterface
             return;
         }
 
-        $tokenStorage = $this->tokenStorage;
+
 
         $token = md5(uniqid(rand(), true));
+        $expiresIn = 120;
 
-        $stateToken = $this->tokenFactory->create("state", $token);
+        $stateToken = $this->tokenManager->createToken("state");
+        $stateToken->setToken($token);
+        $stateToken->setExpiresIn($expiresIn);
 
-        $tokenStorage->setToken($stateToken);
+        $this->tokenManager->persistToken($stateToken);
 
         $url = $url . "&state=$token";
 
@@ -66,9 +61,7 @@ class StateListener implements EventSubscriberInterface
             throw new CsrfException();
         }
 
-        $tokenStorage = $this->tokenStorage;
-
-        $stateToken = $tokenStorage->getToken("state");
+        $stateToken = $this->tokenManager->findToken("state");
 
         if($stateToken === null) {
             throw new CsrfException();
@@ -80,7 +73,7 @@ class StateListener implements EventSubscriberInterface
             throw new CsrfException();
         }
 
-        $tokenStorage->unsetToken("state");
+        $this->tokenManager->removeToken($stateToken);
     }
 
     public static function getSubscribedEvents()

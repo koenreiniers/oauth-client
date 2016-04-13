@@ -3,17 +3,26 @@ namespace Kr\OAuthClient\Token;
 
 abstract class AbstractToken implements TokenInterface
 {
-    protected $token, $expiresAt;
+    /** @var string */
+    protected $token;
+
+    /** @var \DateTime */
+    protected $expiresAt;
 
     /**
-     * AbstractToken constructor.
-     * @param string $token
-     * @param \DateTime|null $expiresAt
+     * @inheritdoc
      */
-    public function __construct($token, \DateTime $expiresAt = null)
+    public function getToken()
     {
-        $this->token        = $token;
-        $this->expiresAt    = $expiresAt;
+        return $this->token;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setToken($token)
+    {
+        $this->token = $token;
     }
 
     /**
@@ -30,16 +39,29 @@ abstract class AbstractToken implements TokenInterface
     /**
      * @inheritdoc
      */
-    public function getToken()
+    public function getExpiresAt()
     {
-        return $this->token;
+        return $this->expiresAt;
     }
 
     /**
      * @inheritdoc
      */
-    public function getExpiresAt()
+    public function setExpiresAt(\DateTime $expiresAt = null)
     {
-        return $this->expiresAt;
+        $this->expiresAt = $expiresAt;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setExpiresIn($seconds)
+    {
+        if($seconds === null) {
+            return;
+        } else {
+        }
+        $expiresAt = (new \DateTime())->modify("+$seconds seconds");
+        $this->setExpiresAt($expiresAt);
     }
 }

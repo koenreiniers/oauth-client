@@ -4,28 +4,22 @@ namespace Kr\OAuthClient\EventListener;
 use Kr\OAuthClient\Credentials\Provider\CredentialsProviderInterface;
 use Kr\HttpClient\Events\RequestEvent;
 use Kr\HttpClient\Events\ResponseEvent;
+use Kr\OAuthClient\Manager\TokenManagerInterface;
 use Kr\OAuthClient\OAuthClientEvents;
-use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
-use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class BearerTokenListener implements EventSubscriberInterface
 {
-
     /** @var CredentialsProviderInterface */
     protected $credentialsProvider;
 
-    /** @var TokenStorageInterface */
-    protected $tokenStorage;
+    /** @var TokenManagerInterface */
+    protected $tokenManager;
 
-    /** @var TokenFactoryInterface */
-    protected $tokenFactory;
-
-    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenStorageInterface $tokenStorage, TokenFactoryInterface $tokenFactory)
+    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenManagerInterface $tokenManager)
     {
         $this->credentialsProvider = $credentialsProvider;
-        $this->tokenStorage = $tokenStorage;
-        $this->tokenFactory = $tokenFactory;
+        $this->tokenManager = $tokenManager;
     }
 
     /**
@@ -50,14 +44,14 @@ class BearerTokenListener implements EventSubscriberInterface
             return;
         }
 
-        $expiresAt = null;
-        if(isset($arguments['expires_in'])) {
-            $expiresIn = $arguments['expires_in'];
-            $expiresAt      = (new \DateTime())->modify("+{$expiresIn} seconds");
-        }
+        $expiresIn = isset($arguments['expires_in']) ? $arguments['expires_in'] : null;
 
-        $token = $this->tokenFactory->create("Bearer", $arguments['access_token'], $expiresAt);
-        $this->tokenStorage->setAccessToken($token);
+        $token = $this->tokenManager->createToken("Bearer");
+        $token->setToken($arguments['access_token']);
+        if($expiresIn !== null) {
+            $token->setExpiresIn($expiresIn);
+        }
+        $this->tokenManager->persistToken($token);
     }
 
     /**
@@ -67,14 +61,15 @@ class BearerTokenListener implements EventSubscriberInterface
      */
     public function onResourceRequest(RequestEvent $event)
     {
-        $tokenStorage = $this->tokenStorage;
+        $request = $event->getRequest();
+        if($request->hasHeader("Authorization")) {
 
-        $accessToken = $tokenStorage->getAccessToken();
-        if($accessToken === null) {
             return;
         }
 
-        if($accessToken->getType() !== "Bearer") {
+        $accessToken = $this->tokenManager->findToken("Bearer");
+
+        if($accessToken === null) {
             return;
         }
 
@@ -83,8 +78,9 @@ class BearerTokenListener implements EventSubscriberInterface
         }
 
         $token = $accessToken->getToken();
-        $authenticatedRequest = $event->getRequest()->withHeader("Authorization", "Bearer $token");
-        $event->setRequest($authenticatedRequest);
+
+        $request = $request->withHeader("Authorization", "Bearer $token");
+        $event->setRequest($request);
     }
 
     /**

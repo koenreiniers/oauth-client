@@ -23,15 +23,12 @@ class TokenFactory implements TokenFactoryInterface
      * Returns a new token instance
      *
      * @param string $type
-     * @param string $token
-     * @param \DateTime|null $expiresAt
      *
      * @return TokenInterface
      */
-    public function create($type, $token, \DateTime $expiresAt = null)
+    public function create($type)
     {
         $class = $this->classMap->getClass($type);
-
-        return new $class($type, $token, $expiresAt);
+        return new $class();
     }
 }

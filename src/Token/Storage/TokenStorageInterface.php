@@ -22,23 +22,9 @@ interface TokenStorageInterface
     public function getToken($type);
 
     /**
-     * Returns the current access token, null when it does not exist
-     *
-     * @return TokenInterface
-     */
-    public function getAccessToken();
-
-    /**
-     * Stores the access token
+     * Removes the token from storage
      *
      * @param TokenInterface $token
      */
-    public function setAccessToken(TokenInterface $token);
-
-    /**
-     * Unsets the token of specified type
-     *
-     * @param string $type
-     */
-    public function unsetToken($type);
+    public function removeToken(TokenInterface $token);
 }

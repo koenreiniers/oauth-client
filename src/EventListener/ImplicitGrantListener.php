@@ -3,10 +3,9 @@ namespace Kr\OAuthClient\EventListener;
 
 use Kr\OAuthClient\Credentials\Provider\CredentialsProviderInterface;
 use Kr\OAuthClient\Event\RedirectEvent;
+use Kr\OAuthClient\Manager\TokenManagerInterface;
 use Kr\OAuthClient\OAuthClientEvents;
 use Kr\OAuthClient\Event\ServerRequestEvent;
-use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
-use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class ImplicitGrantListener implements EventSubscriberInterface
@@ -15,17 +14,13 @@ class ImplicitGrantListener implements EventSubscriberInterface
     /** @var CredentialsProviderInterface */
     protected $credentialsProvider;
 
-    /** @var TokenStorageInterface */
-    protected $tokenStorage;
+    /** @var TokenManagerInterface */
+    protected $tokenManager;
 
-    /** @var TokenFactoryInterface */
-    protected $tokenFactory;
-
-    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenStorageInterface $tokenStorage, TokenFactoryInterface $tokenFactory)
+    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenManagerInterface $tokenManager)
     {
         $this->credentialsProvider = $credentialsProvider;
-        $this->tokenStorage = $tokenStorage;
-        $this->tokenFactory = $tokenFactory;
+        $this->tokenManager = $tokenManager;
     }
 
     /**

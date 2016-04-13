@@ -4,11 +4,10 @@ namespace Kr\OAuthClient\EventListener;
 use GuzzleHttp\Psr7\Request;
 use Kr\OAuthClient\Credentials\Provider\CredentialsProviderInterface;
 use Kr\OAuthClient\Event\RedirectEvent;
+use Kr\OAuthClient\Manager\TokenManagerInterface;
 use Kr\OAuthClient\OAuthClientEvents;
 use Kr\OAuthClient\Event\ServerRequestEvent;
 use Kr\HttpClient\Events\RequestEvent;
-use Kr\OAuthClient\Token\Factory\TokenFactoryInterface;
-use Kr\OAuthClient\Token\Storage\TokenStorageInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AuthorizationCodeListener implements EventSubscriberInterface
@@ -17,17 +16,13 @@ class AuthorizationCodeListener implements EventSubscriberInterface
     /** @var CredentialsProviderInterface */
     protected $credentialsProvider;
 
-    /** @var TokenStorageInterface */
-    protected $tokenStorage;
+    /** @var TokenManagerInterface */
+    protected $tokenManager;
 
-    /** @var TokenFactoryInterface */
-    protected $tokenFactory;
-
-    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenStorageInterface $tokenStorage, TokenFactoryInterface $tokenFactory)
+    public function __construct(CredentialsProviderInterface $credentialsProvider, TokenManagerInterface $tokenManager)
     {
         $this->credentialsProvider = $credentialsProvider;
-        $this->tokenStorage = $tokenStorage;
-        $this->tokenFactory = $tokenFactory;
+        $this->tokenManager = $tokenManager;
     }
 
     /**
@@ -47,7 +42,7 @@ class AuthorizationCodeListener implements EventSubscriberInterface
             return;
         }
 
-        $authCode = $this->tokenStorage->getToken("authorization_code");
+        $authCode = $this->tokenManager->findToken("authorization_code");
         if($authCode === null) {
             return;
         }
@@ -90,13 +85,12 @@ class AuthorizationCodeListener implements EventSubscriberInterface
             return;
         }
 
-        $expiresIn = 60; // TODO
-        $expiresAt = (new \DateTime())->modify("+$expiresIn seconds");
+        $expiresIn = 60;
 
-
-
-        $token = $this->tokenFactory->create("authorization_code", $arguments['code'], $expiresAt);
-        $this->tokenStorage->setToken($token);
+        $token = $this->tokenManager->createToken("authorization_code");
+        $token->setToken($arguments['code']);
+        $token->setExpiresIn($expiresIn);
+        $this->tokenManager->persistToken($token);
     }
 
     /**
