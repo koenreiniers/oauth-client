@@ -94,7 +94,7 @@ class OAuthClient
 
         if($resourceRequest !== null) {
             /** @var RequestEvent $event */
-            $event = new RequestEvent($request);
+            $event = new RequestEvent($resourceRequest);
             $event = $this->eventDispatcher->dispatch(OAuthClientEvents::RESOURCE_REQUEST, $event);
             return $event->getRequest();
         }
