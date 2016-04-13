@@ -21,6 +21,6 @@
     "require": {
         "guzzlehttp/guzzle": "^6.2",
         "symfony/event-dispatcher": "^2.7",
-        "koenreiniers/http-client": "^0.1.0"
+        "koenreiniers/http-client": "^1.0"
     }
 }
