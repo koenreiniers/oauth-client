@@ -1,0 +1,26 @@
+{
+    "name": "koenreiniers/oauth-client",
+    "minimum-stability": "dev",
+    "type": "library",
+    "description": "",
+    "keywords": ["oauth", "client"],
+    "homepage": "http://www.koenreiniers.nl/",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Koen Reiniers",
+            "email": "contact@koenreiniers.nl",
+            "homepage": "http://www.koenreiniers.nl"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kr\\OAuthClient\\": "src/"
+        }
+    },
+    "require": {
+        "guzzlehttp/guzzle": "^6.2",
+        "symfony/event-dispatcher": "^3.0",
+        "koenreiniers/http-client": "^0.1.0"
+    }
+}

@@ -1,0 +1,13 @@
+services:
+
+    oauth_client.credentials_provider:
+        class: abc\def
+
+    oauth_client.token_storage:
+        class: abc\def
+
+    oauth_client.factory:
+        arguments:
+            - "@http_client"
+            - "@event_dispatcher"
+
